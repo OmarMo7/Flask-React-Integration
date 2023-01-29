@@ -34,8 +34,8 @@ def processImage():
     firstName = preprocess('cropped_image_fitst_name.jpg', 5, 1)
 
     arabic_name=pytesseract.image_to_string(firstName, lang='ara',config= ".")
-
-    print(arabic_name[::-1])
+    first_name = arabic_name[::-1].split()[-1]
+    print(first_name)
 
     id = preprocess("cropped_image_id.jpg", 5, 1)
 
