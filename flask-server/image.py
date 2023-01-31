@@ -150,6 +150,7 @@ def execute(image):
     img_file.write(decoded_img)
     img_file.close()
     img_younan = cv2.imread("decoded_img.jpg")
+    img_younan = cv2.imread(image['image_name'])
     img_younan = remove_white_background(img_younan)
     biggest_contour = crop_image(img_younan)
     borders = draw_contours(img_younan, biggest_contour)
@@ -203,3 +204,13 @@ def read_first_name(first_name):
 def read_all():
     people = Person.query.all()
     return people_schema.dump(people)
+    # arabic_numbers_adjusted = []
+    # for i in arabic_numbers[::-1]:
+    #     if i != ' ':
+    #         arabic_numbers_adjusted.append(i)
+    # print(
+    #     f"first_name: {first_name}, second_name: {' '.join(second_name)}, numbers: {arabic_numbers}")
+
+    # return {"first_name": first_name, "second_name": ' '.join(second_name),
+    #         "arabic_numbers": ''.join(arabic_numbers_adjusted)[::-1].strip()}
+
