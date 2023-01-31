@@ -116,30 +116,15 @@ def generate_crops():
     cv2.imwrite("cropped_image_id.jpg", cropped_image_id)
 
 
-def remove_noise(image, median):
-    return cv2.medianBlur(image, median)
-
-
-def dilate(image, dialation):
-    kernel = np.ones((dialation, dialation), np.uint8)
-    return cv2.dilate(image, kernel, iterations=1)
-
-
-def preprocess(image_path, median, dialation):
+def preprocess(image_path):
     image = cv2.imread(image_path)
     grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    img_2 = remove_noise(grayImage, median)
-    # img_2 = increase_contrast(img_2)
-    img_2 = dilate(img_2, dialation)
     (thresh, blackAndWhiteImage) = cv2.threshold(
-        img_2, 100, 255, cv2.THRESH_BINARY)
-    # cv2_imshow(blackAndWhiteImage)
+        grayImage, 0, 255, cv2.THRESH_OTSU)
     return blackAndWhiteImage
 
 
 def execute(image):
-    #   if (os.path.isfile(f'{data}')):
-    print(image)
     img_younan = cv2.imread(image['image_name'])
     img_younan = remove_white_background(img_younan)
     biggest_contour = crop_image(img_younan)
@@ -159,8 +144,12 @@ def execute(image):
 
     arabic_numbers = pytesseract.image_to_string(
         id, lang='arabic_numbers', config=".")
+    arabic_numbers_adjusted = []
+    for i in arabic_numbers[::-1]:
+        if i != ' ':
+            arabic_numbers_adjusted.append(i)
     print(
         f"first_name: {first_name}, second_name: {' '.join(second_name)}, numbers: {arabic_numbers}")
 
     return {"first_name": first_name, "second_name": ' '.join(second_name),
-            "arabic_numbers": arabic_numbers[::-1].strip()}
+            "arabic_numbers": ''.join(arabic_numbers_adjusted)[::-1].strip()}
