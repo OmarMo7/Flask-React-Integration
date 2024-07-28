@@ -1,6 +1,6 @@
 import { makeStyles } from '@mui/styles';
 
-export default makeStyles({
+export default makeStyles(() => ({
   media: {
     height: 0,
     paddingTop: '56.25%',
@@ -23,4 +23,14 @@ export default makeStyles({
     alignItems: 'center',
     padding: '10px 10px 10px 10px',
   },
-});
+  mainContainer: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  actionDiv: {
+    textAlign: 'center',
+  },
+  title: {
+    padding: '0 16px',
+  },
+}));

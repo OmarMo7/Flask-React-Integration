@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { AppBar, Box, Card, CardMedia, Container } from '@mui/material'
+import React, { useState, useEffect } from 'react';
+import { AppBar, Box, Card, CardContent, CardMedia, Container, Typography, Grid, CircularProgress, Button } from '@mui/material'
+import DeleteIcon from '@mui/icons-material/Delete'; 
 import useStyles from './styles'
-import { createImage, process } from './actions';
+import { createImage, getPerson, deletePerson } from './actions';
 
 function App() {
-  const [data, setData] = useState()
+  const [data, setData] = useState('')
+  const [persons, setPersons] = useState([])
   const [base64_result, setBase64_result] = useState('')
   const classes = useStyles()
 
@@ -14,10 +16,16 @@ function App() {
     createImage(base64_result).then(
       (img_name) => {
         console.log(img_name);
-        process(img_name)
+        setPersons([...persons, img_name])
       }
     )
   }
+
+  const deleteP = async (id) => {
+    await deletePerson(id)
+    setPersons(persons.filter((person) => person.id !== id))
+  }
+
 
   const encodeImageFileAsURL = (e) => {
     let base64String = "";
@@ -37,12 +45,11 @@ function App() {
   }
 
 
-  // useEffect(() => {
-  //   if (data.length < 1) return
-  //   var newImageURL = ''
-  //   data.forEach(image => newImageURL = URL.createObjectURL(image))
-  //   setImageURL(newImageURL)
-  // }, [data])
+  useEffect(() => {
+    getPerson().then(personInfo =>
+      setPersons(personInfo)
+    )
+  }, [data])
 
   return (
     <div className="App">
@@ -57,6 +64,24 @@ function App() {
         </AppBar>
         <Card className={classes.card}>
           <CardMedia className={classes.media} component="div" image={data} name="image" title="image" />
+        </Card>
+        <Card>
+          {!persons ? <CircularProgress /> : (
+            <Grid className={classes.container} container alignItems="stretch" spacing={1}>
+              {persons?.map((info) => (
+                <Grid key={info.id} item xs={12} sm={12} md={4} lg={4}>
+                  <CardContent>
+                    <Typography className={classes.title} variant="h5" gutterBottom>{info.fname}</Typography>
+                    <Typography className={classes.title} variant="h5" gutterBottom>{info.lname}</Typography>
+                    <Typography className={classes.title} variant="h5" gutterBottom>{info.id_number}</Typography>
+                    <Button size="small" color="secondary" onClick={() => deleteP(info.id)}>
+                      <DeleteIcon fontSize="small" /> &nbsp; Delete
+                    </Button>
+                  </CardContent>
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Card>
       </Container>
     </div>

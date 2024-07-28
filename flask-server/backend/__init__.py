@@ -1,9 +1,7 @@
-from flask import Flask
+import config
+
 
 def create_app():
-  app = Flask(__name__)
-  app.config['SECRET_KEY'] = "MY_SECRET_KEY"
-
-  return app
-
-
+    app = config.connex_app
+    app.add_api(config.basedir / "swagger2.yml")
+    return app

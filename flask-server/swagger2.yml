@@ -1,0 +1,55 @@
+openapi: "3.0.0"
+info:
+  name: "flask_app"
+  title: "RP Flask REST API"
+  description: "An API about people and notes"
+  version: "1.0.0"
+
+servers:
+  - url: "/"
+
+paths:
+  /image:
+    post:
+      operationId: "image.execute"
+      tags:
+        - "Image"
+      summary: "This preprocesses the image and extracts the info out of it."
+      requestBody:
+        description: "Operating on an image"
+        required: True
+        content:
+          application/json:
+            schema:
+              x-body-name: "image"
+              $ref: "#/components/schemas/Image"
+      responses:
+        "200":
+          description: "Successfully read the image"
+  /image/{id}/delete:
+    delete:
+      tags:
+        - People
+      operationId: "image.deletePerson"
+      summary: "Delete a person"
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "204":
+          description: "Successfully deleted person"
+components:
+  schemas:
+    Image:
+      type: "object"
+      required:
+        - image_name
+      properties:
+        image_name:
+          type: "string"
+  parameters:
+    id:
+      name: "id"
+      in: path
+      required: True
+      schema:
+        type: "string"

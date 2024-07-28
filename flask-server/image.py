@@ -3,6 +3,11 @@ import numpy as np
 import os
 import time
 import pytesseract
+from flask import make_response, abort
+from base64 import b64decode
+from config import db
+from model import Person, people_schema, person_schema
+import convert_numbers
 
 
 def remove_white_background(img):
@@ -47,7 +52,7 @@ def perspectiveTransform(image, border_points):
     origin_points_dict = {'a': [0, 0], 'b': [
         0, 820], 'c': [1280, 0], 'd': [1280, 820]}
     border_points_dict = {'a': a, 'b': b, 'c': c, 'd': d}
-    print(border_points)
+    # print(border_points)
     origin_points = dict(sorted(origin_points_dict.items(),
                          key=lambda item: item[1][0] + item[1][1]))
     border_points = dict(sorted(border_points_dict.items(),
@@ -58,9 +63,9 @@ def perspectiveTransform(image, border_points):
         temp = [border_points[1][0], border_points[1][1]]
         border_points[1] = border_points[2]
         border_points[2] = temp
-    print("_______________")
-    print(origin_points)
-    print(border_points)
+    # print("_______________")
+    # print(origin_points)
+    # print(border_points)
     pts1 = np.float32(border_points)
     pts2 = np.float32(origin_points)
     M = cv2.getPerspectiveTransform(pts1, pts2)
@@ -124,8 +129,27 @@ def preprocess(image_path):
     return blackAndWhiteImage
 
 
+def turnToEnglish(arabic_numbers):
+    return convert_numbers.arabic_to_english(arabic_numbers)
+
+
+def deletePerson(id):
+    existing_person = Person.query.filter(Person.id == id).one_or_none()
+
+    if existing_person:
+        db.session.delete(existing_person)
+        db.session.commit()
+        return make_response(f"{id} successfully deleted", 200)
+    else:
+        abort(404, f"Person with last name {id} not found")
+
+
 def execute(image):
-    img_younan = cv2.imread(image['image_name'])
+    decoded_img = b64decode(image['image_name'])
+    img_file = open('decoded_img.jpg', 'wb')
+    img_file.write(decoded_img)
+    img_file.close()
+    img_younan = cv2.imread("decoded_img.jpg")
     img_younan = remove_white_background(img_younan)
     biggest_contour = crop_image(img_younan)
     borders = draw_contours(img_younan, biggest_contour)
@@ -134,22 +158,48 @@ def execute(image):
     adjusted_image = getAveragePixQuarter(transformed)
     cv2.imwrite('adjusted_image.jpg', adjusted_image)
     generate_crops()
-    firstName = preprocess('cropped_image_fitst_name.jpg', 5, 1)
+    firstName = preprocess('cropped_image_fitst_name.jpg')
     arabic_name = pytesseract.image_to_string(
         firstName, lang='ara', config=".")
+    secondName = preprocess('cropped_image_last_name.jpg')
+    arabic_second_name = pytesseract.image_to_string(
+        secondName, lang='ara', config=".")
+    # print(arabic_second_name)
     first_name = arabic_name.split()[0]
-    second_name = arabic_name.split()[1:]
+    second_name = arabic_name.split()[1:] if arabic_name.split()[
+        1:] == [] else arabic_second_name.split()
 
-    id = preprocess("cropped_image_id.jpg", 5, 1)
+    id = preprocess("cropped_image_id.jpg")
 
     arabic_numbers = pytesseract.image_to_string(
         id, lang='arabic_numbers', config=".")
-    arabic_numbers_adjusted = []
-    for i in arabic_numbers[::-1]:
-        if i != ' ':
-            arabic_numbers_adjusted.append(i)
-    print(
-        f"first_name: {first_name}, second_name: {' '.join(second_name)}, numbers: {arabic_numbers}")
+    arabic_numbers = "".join(arabic_numbers.split(" "))
 
-    return {"first_name": first_name, "second_name": ' '.join(second_name),
-            "arabic_numbers": ''.join(arabic_numbers_adjusted)[::-1].strip()}
+    # print(
+    #     f"first_name: {first_name}, second_name: {' '.join(second_name)}, numbers: {arabic_numbers}")
+
+    existing_person = Person.query.filter(
+        Person.id_number == arabic_numbers).one_or_none()
+
+    if existing_person is None:
+
+        new_person = person_schema.load({"id_number": turnToEnglish(arabic_numbers),
+                                         "fname": first_name,
+                                         "lname": ' '.join(second_name),
+                                         },
+                                        session=db.session)
+        db.session.add(new_person)
+        db.session.commit()
+        return person_schema.dump(new_person), 201
+    else:
+        abort(
+            406, f"Person with the id {turnToEnglish(arabic_numbers)} already exists")
+
+
+def read_first_name(first_name):
+    return first_name
+
+
+def read_all():
+    people = Person.query.all()
+    return people_schema.dump(people)
