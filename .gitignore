@@ -1,1 +1,6 @@
 flask-server/env
+flask-server/model
+flask-server/.flask_server
+flask-server/__pycache__
+input_images
+output_images
