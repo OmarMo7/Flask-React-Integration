@@ -1,9 +1,9 @@
 import { postImage, getInfo, deleteOne } from './api/api';
 
 
-export const createImage = async (image) => {
+export const sendImageToAPI = async (image) => {
   try {
-    console.log(typeof (image))
+    console.log(typeof(image))
     const {data} = await postImage(image)
     return data
   } catch (error) {
