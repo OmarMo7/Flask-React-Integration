@@ -2,11 +2,11 @@ import { createClient } from '@sanity/client'
 import imageUrlBuilder from '@sanity/image-url'
 
 export const client = createClient({
-  projectId: "ocu0uat7",
+  projectId: process.env.REACT_APP_projectId,
   dataset: 'production',
   apiVersion: '2022-02-01',
   useCdn: true,
-  token: "sknfKJfpZ5vpnVf3XX8cBfMUFvMYwvXpnoYGRc4KfiGYdOLlNrSlbTTWjfIeBQ49SRXXMXC4cFC8rGYkIIuIb6xSMGxKeHuO3whPG4isbHTx9zrKecPUPUBl9oGk8AX9UH75m71e8NZ3ZSuRvRvRtJccg823hRT6OleNvc8tkQAJgDINGmen",
+  token: process.env.REACT_APP_token,
 })
 
 export const builder = imageUrlBuilder(client)
