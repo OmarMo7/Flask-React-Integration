@@ -4,11 +4,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import useStyles from './styles'
 import { sendImageToAPI, getPerson, deletePerson } from './actions';
 import { client } from './client';
-import { Buffer } from 'buffer';
-import { title } from 'process';
-
-// @ts-ignore
-window.Buffer = Buffer;
 
 function App() {
   const [data, setData] = useState('');
@@ -33,7 +28,7 @@ function App() {
     const base64Data = base64String.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
 
     // Decode base64 string to binary string
-    const binaryString = atob(base64Data);
+    const binaryString = window.atob(base64Data);
 
     // Create an array buffer from the binary string
     const len = binaryString.length;
