@@ -79,6 +79,7 @@ function App() {
       if (fingerPrintExists) {
         setShowMessage(true);
       } else {
+        setShowMessage(false);
         sendImageToAPI(base64_result).then(
           (outputImages) => {
             setCoords(outputImages.coords[0])
@@ -109,18 +110,6 @@ function App() {
     }
     reader.readAsDataURL(file);
   }
-
-  const initializeCounter = async () => {
-    const counterDoc = {
-      _id: 'person-counter', // Fixed ID for the counter document
-      _type: 'counter',
-      type: 'person',
-      value: 0,
-    };
-  
-    await client.createIfNotExists(counterDoc);
-    console.log('Counter initialized');
-  };
   
 
   const cropAndSliceImage = () => {
@@ -163,11 +152,20 @@ function App() {
   const getNextIncrementalId = async () => {
     const transaction = client.transaction();
   
-    const counterDoc = await client.getDocument('person-counter');
-    const nextId = counterDoc.value + 1;
+    let counterDoc;
+    let nextId;
+    const result = await client.getDocument('person');
+    if (result === undefined) {
+      nextId = 1;
+    } else {
+      counterDoc = result;
+      nextId = counterDoc.value + 1;
+      transaction.patch(counterDoc._id, { set: { value: nextId } });
+      await transaction.commit();
+    }
+    console.log(counterDoc)
+    console.log(nextId)
   
-    transaction.patch(counterDoc._id, { set: { value: nextId } });
-    await transaction.commit();
   
     return nextId;
   };
@@ -192,7 +190,6 @@ function App() {
         console.log(`Image ${index} uploaded with ID: ${response._id}`);
         return response._id;
       }));
-      await initializeCounter();
       const incrementalId = await getNextIncrementalId();
       const currentPhotoFingerprint = await generateImageFingerprint(base64_result);
       
