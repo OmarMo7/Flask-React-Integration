@@ -1,2 +1,5 @@
-flask
+Flask
+flask-cors
 tensorflow
+gunicorn
+dotenv 
