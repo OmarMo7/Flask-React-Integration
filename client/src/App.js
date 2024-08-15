@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AppBar, Box, Card, CardContent, CardMedia, Container, Typography, Grid, CircularProgress, Button } from '@mui/material'
+import { AppBar, Box, Card, CardMedia, Container, Typography, Grid, CircularProgress, Button } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete';
 import useStyles from './styles'
 import { sendImageToAPI, getPerson, deletePerson } from './actions';
