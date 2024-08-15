@@ -2,9 +2,18 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from detection import get_coords
 import json
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=[FRONTEND_URL])
+
+@app.route('/', methods=['GET'])
+def homepage():
+    return "Welcome to my backend site"
 
 @app.route('/', methods=['POST'])
 def read_process_image():
