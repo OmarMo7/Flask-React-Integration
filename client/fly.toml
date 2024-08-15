@@ -1,0 +1,25 @@
+  app = "object-detection-frontend"
+
+  [env]
+  PORT = "8080"
+
+  [[services]]
+    internal_port = 8080
+    protocol = "tcp"
+
+    [[services.ports]]
+      handlers = ["http"]
+      port = 80
+
+    [[services.ports]]
+      handlers = ["tls", "http"]
+      port = 443
+
+    [[services.http_checks]]
+      interval = "10s"
+      grace_period = "5s"
+      method = "get"
+      path = "/"
+      protocol = "http"
+      restart_limit = 0
+      timeout = "2s"
