@@ -3,6 +3,18 @@ import base64
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 
+# Set TensorFlow to use only the necessary amount of GPU memory
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
+# Suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 model = load_model('./model/boxes_detector_with_2_names_conv2d_struct_wider_boxes.h5')
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
