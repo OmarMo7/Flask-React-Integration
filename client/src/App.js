@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppBar, Box, Card, CardMedia, Container, Typography, Grid, CircularProgress, Button } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete';
 import useStyles from './styles'
@@ -10,19 +10,21 @@ function App() {
   const [persons, setPersons] = useState([]);
   const [coords, setCoords] = useState([]);
   const [features, setFeatures] = useState([]);
+  const coordsRef = useRef(coords);
   const [originalImage, setOriginalImage] = useState([]);
+  const originalImageRef = useRef(originalImage);
   const [base64_result, setBase64_result] = useState('');
   const [croppedImages, setCroppedImages] = useState([]);
   const [showMessage, setShowMessage] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null); // New state to keep track of the selected document
   const classes = useStyles();
 
-    
+
   const handleDocumentClick = (document) => {
     setSelectedDocument(document);
   };
 
-  
+
   async function generateImageFingerprint(base64String) {
     // Remove the data URL prefix if present
     const base64Data = base64String.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
@@ -34,7 +36,7 @@ function App() {
     const len = binaryString.length;
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      bytes[i] = binaryString.charCodeAt(i);
     }
 
     // Create a Blob from the array buffer
@@ -46,12 +48,12 @@ function App() {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const fingerprint = hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
     return fingerprint;
-}
+  }
 
   const handleDeleteClick = async (id, incrementalId) => {
     await deleteDocument(id);
-    await deletePerson(incrementalId);
     setPersons(persons.filter((person) => person.incrementalId !== incrementalId));
+    await deletePerson(incrementalId);
     setSelectedDocument(null); // Reset the selected document after deletion
   };
 
@@ -65,12 +67,12 @@ function App() {
       throw error;
     }
   };
-  
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('You clicked submit.');
-  
+
     try {
       const currentPhotoFingerprint = await generateImageFingerprint(base64_result);
       console.log(currentPhotoFingerprint)
@@ -80,19 +82,16 @@ function App() {
         setShowMessage(true);
       } else {
         setShowMessage(false);
-        sendImageToAPI(base64_result).then(
-          (outputImages) => {
-            setCoords(outputImages.coords[0])
-            setFeatures(outputImages.features)
-          }
-        )
+        const outputImages = await sendImageToAPI(base64_result)
+        setCoords(outputImages.coords[0])
+        setFeatures(outputImages.features)
       }
     } catch (error) {
       console.log('Failed to generate image fingerprint with the error: ', error);
     }
 
   }
-  
+
 
   const encodeImageFileAsURL = (e) => {
     let base64String = "";
@@ -110,16 +109,16 @@ function App() {
     }
     reader.readAsDataURL(file);
   }
-  
+
 
   const cropAndSliceImage = () => {
     const croppedImagesArray = coords.map((coord) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
-  
+
       img.src = URL.createObjectURL(originalImage);
-  
+
       return new Promise((resolve) => {
         img.onload = () => {
           canvas.width = Math.round(coord[2] * img.width) - Math.round(coord[0] * img.width);
@@ -135,13 +134,13 @@ function App() {
             canvas.width,
             canvas.height
           );
-  
+
           const base64Image = canvas.toDataURL('image/jpeg');
           resolve(base64Image);
         };
       });
     });
-  
+
     Promise.all(croppedImagesArray).then((images) => {
       setCroppedImages(images);
       uploadImagesToSanity(images);
@@ -150,25 +149,27 @@ function App() {
 
 
   const getNextIncrementalId = async () => {
-    const transaction = client.transaction();
-  
+
     let counterDoc;
     let nextId;
-    const result = await client.getDocument('person');
-    if (result === undefined) {
+    const result = await client.fetch('*[_type == "person"][0]');  // Fetch the latest "person" document
+    console.log(result);
+
+    if (!result) {
+      // No documents exist, initialize counter
       nextId = 1;
     } else {
+      // Documents exist, increment counter
       counterDoc = result;
-      nextId = counterDoc.value + 1;
-      transaction.patch(counterDoc._id, { set: { value: nextId } });
-      await transaction.commit();
+      nextId = parseInt(counterDoc.title.split('_')[1]) + 1;
     }
-    console.log(counterDoc)
-    console.log(nextId)
-  
-  
+
+    console.log(counterDoc);
+    console.log(nextId);
+
     return nextId;
   };
+
 
   const populatePageWithData = async () => {
     const query = '*[_type == "person"]';
@@ -182,7 +183,7 @@ function App() {
       const uploadedImages = await Promise.all(images.map(async (image, index) => {
         const blob = base64ToBlob(image);
         const file = new File([blob], `uploaded-image-${index}.jpg`, { type: 'image/jpeg' });
-  
+
         const response = await client.assets.upload('image', file, {
           contentType: 'image/jpeg',
           filename: `uploaded-image-${index}.jpg`,
@@ -192,11 +193,11 @@ function App() {
       }));
       const incrementalId = await getNextIncrementalId();
       const currentPhotoFingerprint = await generateImageFingerprint(base64_result);
-      
+
       const doc = {
         _type: 'person',
-        incrementalId: incrementalId,
-        title: `person_${incrementalId}`, // Add the title field with the incremental ID
+        value: incrementalId,
+        title: `person_${incrementalId}`,
         person_photo: {
           _type: 'image',
           asset: {
@@ -227,9 +228,11 @@ function App() {
         },
         photo_fingerprint: currentPhotoFingerprint,
       };
+
       // It's crucial to save the return of client.create instead of saving the raw document itself 
       // client.create adds some features that will be necessary later on
-      const newDocument = await client.create(doc);   
+      // await getNextIncrementalId();
+      const newDocument = await client.create(doc);
       setPersons([...persons, newDocument])
       console.log('Document created successfully');
     } catch (error) {
@@ -237,7 +240,7 @@ function App() {
     }
   };
 
-  
+
   const base64ToBlob = (base64) => {
     const byteString = atob(base64.split(',')[1]);
     const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
@@ -248,8 +251,8 @@ function App() {
     }
     return new Blob([ab], { type: mimeString });
   };
-  
-  
+
+
   useEffect(() => {
     populatePageWithData()
   }, []);
@@ -258,6 +261,9 @@ function App() {
   useEffect(() => {
     if (coords.length && originalImage) {
       cropAndSliceImage();
+      // Reset the values immediately after cropAndSliceImage
+      setCoords([]);
+      setOriginalImage(null);
     }
   }, [coords, originalImage]);
 
@@ -276,32 +282,32 @@ function App() {
           <CardMedia className={classes.media} component="div" image={data} name="image" title="image" />
         </Card>
         {showMessage && (
-        <Typography variant="h6" align="center" color="error">
-          This card has already been submitted.
-        </Typography>
-      )}
-        <Grid container spacing={2}>
-      {croppedImages.map((croppedImage, index) => (
-        <Grid item xs={12} sm={6} md={4} key={index}>
-          <Typography
-          variant='h5`'
-          >
-            {features[index]}
+          <Typography variant="h6" align="center" color="error">
+            This card has already been submitted.
           </Typography>
-          <img
-            src={croppedImage}
-            alt={`Slice ${index + 1}`}
-            style={{
-              width: '100%',
-              height: 'auto',
-              borderRadius: '8px',
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-            }}
-          />
+        )}
+        <Grid container spacing={2}>
+          {croppedImages.map((croppedImage, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <Typography
+                variant='h5`'
+              >
+                {features[index]}
+              </Typography>
+              <img
+                src={croppedImage}
+                alt={`Slice ${index + 1}`}
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                }}
+              />
+            </Grid>
+          ))}
         </Grid>
-      ))}
-    </Grid>
-    <Grid container spacing={2}>
+        <Grid container spacing={2}>
           {persons.map((person, index) => (
             <Grid item xs={12} sm={6} md={4} key={index}>
               <Button

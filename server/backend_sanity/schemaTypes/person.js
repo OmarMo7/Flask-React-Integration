@@ -1,63 +1,42 @@
 export default {
   name: 'person',
-  title: 'Person',
   type: 'document',
+  title: 'Person',
   fields: [
     {
-      name: 'incrementalId',
-      title: 'Incremental ID',
+      name: 'value',
       type: 'number',
-      hidden: true,
+      title: 'Value',
     },
     {
       name: 'title',
-      title: 'Title',
       type: 'string',
-    },
-    {
-      name: 'first_name',
-      title: 'FirstName',
-      type: 'image',
-      options: {
-        hotspot: true,
-      },
-    },
-    {
-      name: 'second_name',
-      title: 'SecondName',
-      type: 'image',
-      options: {
-        hotspot: true,
-      },
-    },
-    {
-      name: 'national_id',
-      title: 'National_ID',
-      type: 'image',
-      options: {
-        hotspot: true,
-      },
+      title: 'Title',
     },
     {
       name: 'person_photo',
-      title: 'Person_photo',
       type: 'image',
-      options: {
-        hotspot: true,
-      },
+      title: 'Person Photo',
+    },
+    {
+      name: 'national_id',
+      type: 'image',
+      title: 'National ID',
+    },
+    {
+      name: 'first_name',
+      type: 'image',
+      title: 'First Name',
+    },
+    {
+      name: 'second_name',
+      type: 'image',
+      title: 'Second Name',
     },
     {
       name: 'photo_fingerprint',
-      title: 'Photo Fingerprint',
       type: 'string',
-    },
-    {
-      name: 'card_image',
-      title: 'CardImage',
-      type: 'image',
-      options: {
-        hotspot: true,
-      },
+      title: 'Photo Fingerprint',
     },
   ],
 };
