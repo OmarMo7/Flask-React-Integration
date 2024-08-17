@@ -5,6 +5,8 @@ import useStyles from './styles'
 import { sendImageToAPI, getPerson, deletePerson } from './actions';
 import { client } from './client';
 
+//TODO: 1 - A condition to prevent the creation of another document with the same title - 2 - Setting the loading circle
+
 function App() {
   const [data, setData] = useState('');
   const [persons, setPersons] = useState([]);
