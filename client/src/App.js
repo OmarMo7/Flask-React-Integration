@@ -203,7 +203,7 @@ function App() {
                     Delete
                   </Button>
                   <Grid item xs={12} sm={6} md={4} key={index}>
-                    <Typography variant="h5">{features[index]}</Typography>
+                    <Typography variant="h5">Person Photo</Typography>
                     <img
                       src={urlFor(person.person_photo).url()}
                       alt={`Slice ${index + 1}`}
@@ -214,6 +214,7 @@ function App() {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
                       }}
                     />
+                    <Typography variant="h5">National ID</Typography>
                     <img
                       src={urlFor(person.national_id).url()}
                       alt={`Slice ${index + 1}`}
@@ -224,6 +225,7 @@ function App() {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
                       }}
                     />
+                    <Typography variant="h5">First Name</Typography>
                     <img
                       src={urlFor(person.first_name).url()}
                       alt={`Slice ${index + 1}`}
@@ -234,6 +236,7 @@ function App() {
                         boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
                       }}
                     />
+                    <Typography variant="h5">Second Name</Typography>
                     <img
                       src={urlFor(person.second_name).url()}
                       alt={`Slice ${index + 1}`}
