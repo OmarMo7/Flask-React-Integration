@@ -1,70 +1,74 @@
-# Getting Started with Create React App
+# Overview
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is a full-stack pipeline that combines a React-based frontend application with a Python backend for machine learning. The main objective of the project is to receive an image of an Egyptian national ID card and detect four key components:
 
-## Available Scripts
+- Citizen's first name
+- Citizen's last name
+- Citizen's national ID number
+- Citizen's photo
 
-In the project directory, you can run:
+# Project Setup
 
-### `npm start`
+## Client
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Install dependencies: `npm install`
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Python Backend
 
-### `npm test`
+- Install dependencies: `pip install -r requirements.txt`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+# Running the Project
 
-### `npm run build`
+## Client
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- Navigate to the client directory: `cd client`
+- Start the application: `npm run start`
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Server
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Navigate to the server directory: `cd server`
+- Start the Python server: `python app.py`
 
-### `npm run eject`
+## Sanity (optional)
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- Navigate to the backend_sanity directory: `cd server/backend_sanity`
+- Start the Sanity server: `sanity start`
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Technology Stack
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Frontend
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- ReactJS
 
-## Learn More
+## Backend
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- Python
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Database
 
-### Code Splitting
+- Sanity.io
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Useful Commands
 
-### Analyzing the Bundle Size
+- Delete all records: `sanity documents query "_type == 'person'" --apiVersion 2022-02-01 groq "_" -o ndjson xargs sanity documents delete`
+- Open Sanity manager interface: `sanity manage`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Containerization
 
-### Making a Progressive Web App
+- Docker
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Useful Commands
 
-### Advanced Configuration
+- Build frontend image: `docker build -t frontend_react .`
+- Build backend image: `docker build -t backend_python .`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Deployment
 
-### Deployment
+- Fly.io
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Useful Commands
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Scale up backend memory: `fly scale memory 2048 -a object-detection-backend`
+- Allocate shared IP: `fly ips allocate-v4 --shared`
+- Deploy frontend locally: `flyctl deploy -a object-detection-frontend --local-only --image frontend_react`
+- Deploy backend locally: `flyctl deploy -a object-detection-backend --local-only --image backend_python`
