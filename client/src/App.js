@@ -1,333 +1,251 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { AppBar, Box, Card, CardMedia, Container, Typography, Grid, CircularProgress, Button } from '@mui/material'
-import DeleteIcon from '@mui/icons-material/Delete';
-import useStyles from './styles'
-import { sendImageToAPI, getPerson, deletePerson } from './actions';
-import { client } from './client';
+import React, { useState, useEffect } from "react";
+import {
+  AppBar,
+  Box,
+  Card,
+  CardMedia,
+  Container,
+  Typography,
+  Grid,
+  CircularProgress,
+  Button,
+} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import useStyles from "./styles";
+import { client } from "./client";
+import {
+  handleDeleteClick,
+  handleSubmit,
+  handleDocumentClick,
+} from "./utils/handlers";
+import { cropAndSliceImage } from "./utils/cropAndSlice";
+import { uploadImagesToSanity } from "./utils/uploadToSanity";
+import imageUrlBuilder from "@sanity/image-url";
 
-//TODO: 1 - A condition to prevent the creation of another document with the same title - 2 - Setting the loading circle
+const builder = imageUrlBuilder(client);
+
+function urlFor(source) {
+  return builder.image(source);
+}
 
 function App() {
-  const [data, setData] = useState('');
+  const [data, setData] = useState("");
   const [persons, setPersons] = useState([]);
   const [coords, setCoords] = useState([]);
   const [features, setFeatures] = useState([]);
-  const coordsRef = useRef(coords);
+  const [submitPress, setSubmitPress] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [originalImage, setOriginalImage] = useState([]);
-  const originalImageRef = useRef(originalImage);
-  const [base64_result, setBase64_result] = useState('');
+  const [base64_result, setBase64_result] = useState("");
   const [croppedImages, setCroppedImages] = useState([]);
-  const [showMessage, setShowMessage] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState(null); // New state to keep track of the selected document
+  const [message, setMessage] = useState("");
+  const [selectedDocument, setSelectedDocument] = useState(null);
   const classes = useStyles();
 
-
-  const handleDocumentClick = (document) => {
-    setSelectedDocument(document);
-  };
-
-
-  async function generateImageFingerprint(base64String) {
-    // Remove the data URL prefix if present
-    const base64Data = base64String.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
-
-    // Decode base64 string to binary string
-    const binaryString = window.atob(base64Data);
-
-    // Create an array buffer from the binary string
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    // Create a Blob from the array buffer
-    const blob = new Blob([bytes], { type: 'image/jpeg' }); // Adjust MIME type as needed
-
-    // Convert Blob to ArrayBuffer
-    const buffer = await blob.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const fingerprint = hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
-    return fingerprint;
-  }
-
-  const handleDeleteClick = async (id, incrementalId) => {
-    await deleteDocument(id);
-    setPersons(persons.filter((person) => person.incrementalId !== incrementalId));
-    await deletePerson(incrementalId);
-    setSelectedDocument(null); // Reset the selected document after deletion
-  };
-
-  const deleteDocument = async (id) => {
-    try {
-      const response = await client.delete(id);
-      console.log('Document deleted:', response);
-      return response;
-    } catch (error) {
-      console.error('Delete failed:', error.message);
-      throw error;
-    }
-  };
-
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log('You clicked submit.');
-
-    try {
-      const currentPhotoFingerprint = await generateImageFingerprint(base64_result);
-      console.log(currentPhotoFingerprint)
-      const fingerPrintExists = persons.some(person => String(person.photo_fingerprint) === String(currentPhotoFingerprint));
-      console.log(persons)
-      if (fingerPrintExists) {
-        setShowMessage(true);
-      } else {
-        setShowMessage(false);
-        const outputImages = await sendImageToAPI(base64_result)
-        setCoords(outputImages.coords[0])
-        setFeatures(outputImages.features)
-      }
-    } catch (error) {
-      console.log('Failed to generate image fingerprint with the error: ', error);
-    }
-
-  }
-
-
   const encodeImageFileAsURL = (e) => {
-    let base64String = "";
-
-    setData(URL.createObjectURL(e.target.files[0]))
-
-    var file = e.target.files[0];
-    setOriginalImage(file)
-    var reader = new FileReader();
-
-    reader.onload = function () {
-      base64String = reader.result.replace("data:", "")
-        .replace(/^.+,/, "");
-      setBase64_result(base64String)
-    }
-    reader.readAsDataURL(file);
-  }
-
-
-  const cropAndSliceImage = () => {
-    const croppedImagesArray = coords.map((coord) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-
-      img.src = URL.createObjectURL(originalImage);
-
-      return new Promise((resolve) => {
-        img.onload = () => {
-          canvas.width = Math.round(coord[2] * img.width) - Math.round(coord[0] * img.width);
-          canvas.height = Math.round(coord[3] * img.height) - Math.round(coord[1] * img.height);
-          ctx.drawImage(
-            img,
-            Math.round(coord[0] * img.width),
-            Math.round(coord[1] * img.height),
-            canvas.width,
-            canvas.height,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
-
-          const base64Image = canvas.toDataURL('image/jpeg');
-          resolve(base64Image);
-        };
-      });
-    });
-
-    Promise.all(croppedImagesArray).then((images) => {
-      setCroppedImages(images);
-      uploadImagesToSanity(images);
-    });
-  };
-
-
-  const getNextIncrementalId = async () => {
-
-    let counterDoc;
-    let nextId;
-    const result = await client.fetch('*[_type == "person"][0]');  // Fetch the latest "person" document
-    console.log(result);
-
-    if (!result) {
-      // No documents exist, initialize counter
-      nextId = 1;
-    } else {
-      // Documents exist, increment counter
-      counterDoc = result;
-      nextId = parseInt(counterDoc.title.split('_')[1]) + 1;
-    }
-
-    console.log(counterDoc);
-    console.log(nextId);
-
-    return nextId;
-  };
-
-
-  const populatePageWithData = async () => {
-    const query = '*[_type == "person"]';
-    const persons = await client.fetch(query)
-
-    setPersons(persons)
-  }
-
-  const uploadImagesToSanity = async (images) => {
     try {
-      const uploadedImages = await Promise.all(images.map(async (image, index) => {
-        const blob = base64ToBlob(image);
-        const file = new File([blob], `uploaded-image-${index}.jpg`, { type: 'image/jpeg' });
+      let base64String = "";
 
-        const response = await client.assets.upload('image', file, {
-          contentType: 'image/jpeg',
-          filename: `uploaded-image-${index}.jpg`,
-        });
-        console.log(`Image ${index} uploaded with ID: ${response._id}`);
-        return response._id;
-      }));
-      const incrementalId = await getNextIncrementalId();
-      const currentPhotoFingerprint = await generateImageFingerprint(base64_result);
+      setData(URL.createObjectURL(e.target.files[0]));
 
-      const doc = {
-        _type: 'person',
-        value: incrementalId,
-        title: `person_${incrementalId}`,
-        person_photo: {
-          _type: 'image',
-          asset: {
-            _type: 'reference',
-            _ref: uploadedImages[0],
-          },
-        },
-        national_id: {
-          _type: 'image',
-          asset: {
-            _type: 'reference',
-            _ref: uploadedImages[1],
-          },
-        },
-        first_name: {
-          _type: 'image',
-          asset: {
-            _type: 'reference',
-            _ref: uploadedImages[2],
-          },
-        },
-        second_name: {
-          _type: 'image',
-          asset: {
-            _type: 'reference',
-            _ref: uploadedImages[3],
-          },
-        },
-        photo_fingerprint: currentPhotoFingerprint,
+      var file = e.target.files[0];
+      setOriginalImage(file);
+      var reader = new FileReader();
+
+      reader.onload = function () {
+        base64String = reader.result.replace("data:", "").replace(/^.+,/, "");
+        setBase64_result(base64String);
       };
-
-      // It's crucial to save the return of client.create instead of saving the raw document itself 
-      // client.create adds some features that will be necessary later on
-      // await getNextIncrementalId();
-      const newDocument = await client.create(doc);
-      setPersons([...persons, newDocument])
-      console.log('Document created successfully');
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error('Error uploading images or creating document:', error);
+      console.error("Error encoding image file:", error);
+      setMessage("Error encoding image file");
     }
   };
-
-
-  const base64ToBlob = (base64) => {
-    const byteString = atob(base64.split(',')[1]);
-    const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([ab], { type: mimeString });
-  };
-
 
   useEffect(() => {
-    populatePageWithData()
+    const populatePageWithData = async () => {
+      try {
+        const queryAllPersons = '*[_type == "person"]';
+        const persons = await client.fetch(queryAllPersons);
+        setPersons(persons);
+      } catch (error) {
+        console.error("Error fetching data from Sanity:", error);
+        setMessage("Error fetching data from Sanity");
+      }
+    };
+
+    populatePageWithData();
   }, []);
 
-
   useEffect(() => {
-    if (coords.length && originalImage) {
-      cropAndSliceImage();
-      // Reset the values immediately after cropAndSliceImage
-      setCoords([]);
-      setOriginalImage(null);
+    if (coords.length) {
+      try {
+        cropAndSliceImage(coords, originalImage, setCroppedImages, (images) =>
+          uploadImagesToSanity(
+            images,
+            base64_result,
+            persons,
+            setPersons,
+            setMessage
+          )
+        );
+        setCoords([]);
+        setOriginalImage(null);
+      } catch (error) {
+        console.error("Error processing images:", error);
+        setMessage("Error processing images");
+      }
     }
-  }, [coords, originalImage]);
+  }, [submitPress]);
 
   return (
     <div className="App">
       <Container>
-        <AppBar className={classes.appBar} position="static" >
-          <form onSubmit={handleSubmit} method="POST">
-            <Box textAlign='center'>
-              <input type="file" label="image" multiple accept="image/*" name="image" onChange={encodeImageFileAsURL} />
-              <input type="submit" value={"send form"} />
+        <AppBar className={classes.appBar} position="static">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit(
+                e,
+                base64_result,
+                persons,
+                setMessage,
+                setCoords,
+                setFeatures,
+                setSubmitPress,
+                setIsLoading
+              );
+            }}
+            method="POST"
+          >
+            <Box textAlign="center">
+              <input
+                type="file"
+                label="image"
+                multiple
+                accept="image/*"
+                name="image"
+                onChange={encodeImageFileAsURL}
+              />
+              <input type="submit" value="send form" disabled={isLoading} />
+              {isLoading && <CircularProgress />}
             </Box>
           </form>
         </AppBar>
         <Card className={classes.card}>
-          <CardMedia className={classes.media} component="div" image={data} name="image" title="image" />
+          <CardMedia
+            className={classes.media}
+            component="div"
+            image={data}
+            name="image"
+            title="image"
+          />
         </Card>
-        {showMessage && (
+        {message && (
           <Typography variant="h6" align="center" color="error">
-            This card has already been submitted.
+            {message}
           </Typography>
         )}
         <Grid container spacing={2}>
-          {croppedImages.map((croppedImage, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <Typography
-                variant='h5`'
-              >
-                {features[index]}
-              </Typography>
-              <img
-                src={croppedImage}
-                alt={`Slice ${index + 1}`}
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                }}
-              />
-            </Grid>
-          ))}
+          {!selectedDocument &&
+            croppedImages.map((croppedImage, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Typography variant="h5">{features[index]}</Typography>
+                <img
+                  src={croppedImage}
+                  alt={`Slice ${index + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "auto",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+              </Grid>
+            ))}
         </Grid>
         <Grid container spacing={2}>
-          {persons.map((person, index) => (
+          {persons?.map((person, index) => (
             <Grid item xs={12} sm={6} md={4} key={index}>
               <Button
                 variant="contained"
-                color={selectedDocument === person.title ? 'primary' : 'secondary'}
-                onClick={() => handleDocumentClick(person.title)}
+                color={
+                  selectedDocument === person.title ? "primary" : "secondary"
+                }
+                onClick={() =>
+                  handleDocumentClick(
+                    person,
+                    index,
+                    selectedDocument,
+                    setSelectedDocument
+                  )
+                }
               >
                 {person.title}
               </Button>
               {selectedDocument === person.title && (
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={<DeleteIcon />}
-                  onClick={() => handleDeleteClick(person._id, person.incrementalId)}
-                >
-                  Delete
-                </Button>
+                <>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<DeleteIcon />}
+                    onClick={() =>
+                      handleDeleteClick(
+                        person._id,
+                        person.value,
+                        persons,
+                        setPersons,
+                        setSelectedDocument
+                      )
+                    }
+                  >
+                    Delete
+                  </Button>
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Typography variant="h5">{features[index]}</Typography>
+                    <img
+                      src={urlFor(person.person_photo).url()}
+                      alt={`Slice ${index + 1}`}
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                      }}
+                    />
+                    <img
+                      src={urlFor(person.national_id).url()}
+                      alt={`Slice ${index + 1}`}
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                      }}
+                    />
+                    <img
+                      src={urlFor(person.first_name).url()}
+                      alt={`Slice ${index + 1}`}
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                      }}
+                    />
+                    <img
+                      src={urlFor(person.second_name).url()}
+                      alt={`Slice ${index + 1}`}
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        borderRadius: "8px",
+                        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                      }}
+                    />
+                  </Grid>
+                </>
               )}
             </Grid>
           ))}
