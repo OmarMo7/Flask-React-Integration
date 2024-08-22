@@ -1,0 +1,16 @@
+[[services]]
+  internal_port = 5000
+  protocol = "tcp"
+
+  [[services.http_checks]]
+    interval = "10s"
+    grace_period = "1m"
+    method = "GET"
+    path = "/"
+    protocol = "http"
+    restart_limit = 0
+    timeout = "2s"
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443

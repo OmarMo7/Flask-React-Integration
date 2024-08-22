@@ -1,0 +1,5 @@
+./backend_sanity
+./input_images
+./output_images
+./.flask_server
+./__pycache__

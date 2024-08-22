@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const url = 'http://localhost:5000/image'
+const url = process.env.REACT_APP_API_URL
 
 export const postImage = (newImage) => axios.post(url, newImage)
-export const processApi = (image_name) => axios.get(`${url}?image_name=${image_name}`)
+export const deleteOne = (id) => axios.delete(`${url}/${id}/delete`)
+export const getInfo = () => axios.get(url)
