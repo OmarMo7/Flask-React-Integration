@@ -1,1 +1,6 @@
-flask-server/env
+server/env
+server/model
+server/.flask_server
+server/__pycache__
+input_images
+output_images

@@ -1,0 +1,19 @@
+App.js
+----
+setPersons(prevPersons => {
+        if (prevPersons.length === 0) return prevPersons; // No persons to update
+  
+        const lastIndex = prevPersons.length - 1;
+        const updatedPersons = [...prevPersons];
+        updatedPersons[lastIndex] = {
+          ...updatedPersons[lastIndex],
+          photo_fingerprint: currentPhotoFingerprint
+        };
+  
+        return updatedPersons;
+      });
+
+
+Command for deleting all documents
+----
+sanity documents query "*[_type == 'person']" --apiVersion 2022-02-01 groq "*" -o ndjson xargs sanity documents delete
