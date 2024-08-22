@@ -17,3 +17,5 @@ setPersons(prevPersons => {
 Command for deleting all documents
 ----
 sanity documents query "*[_type == 'person']" --apiVersion 2022-02-01 groq "*" -o ndjson xargs sanity documents delete
+
+test: /\.js$|jsx/,
